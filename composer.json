@@ -14,9 +14,11 @@
     "mTLS",
     "TTLV"
   ],
+  "homepage": "https://cyphera.io",
   "authors": [
     {
-      "name": "Horizon Digital Engineering LLC"
+      "name": "Leslie Gutschow",
+      "email": "leslie.gutschow@horizondigital.dev"
     }
   ],
   "require": {

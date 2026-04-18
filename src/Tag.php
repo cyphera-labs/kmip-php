@@ -72,10 +72,12 @@ final class Operation
 
 final class ObjectType
 {
-    public const SYMMETRIC_KEY = 0x00000001;
-    public const PUBLIC_KEY    = 0x00000002;
-    public const PRIVATE_KEY   = 0x00000003;
-    public const CERTIFICATE   = 0x00000006;
+    public const CERTIFICATE   = 0x00000001;
+    public const SYMMETRIC_KEY = 0x00000002;
+    public const PUBLIC_KEY    = 0x00000003;
+    public const PRIVATE_KEY   = 0x00000004;
+    public const SPLIT_KEY     = 0x00000005;
+    public const TEMPLATE      = 0x00000006;
     public const SECRET_DATA   = 0x00000007;
     public const OPAQUE_DATA   = 0x00000008;
 }
