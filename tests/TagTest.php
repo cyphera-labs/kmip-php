@@ -97,7 +97,7 @@ final class TagTest extends TestCase
 
     public function testOperationCheck(): void
     {
-        $this->assertSame(0x0000001C, Operation::CHECK);
+        $this->assertSame(0x00000009, Operation::CHECK);
     }
 
     public function testOperationNoDuplicateValues(): void

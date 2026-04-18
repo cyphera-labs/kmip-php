@@ -67,7 +67,7 @@ final class Operation
     public const LOCATE   = 0x00000008;
     public const ACTIVATE = 0x00000012;
     public const DESTROY  = 0x00000014;
-    public const CHECK    = 0x0000001C;
+    public const CHECK    = 0x00000009;
 }
 
 final class ObjectType
