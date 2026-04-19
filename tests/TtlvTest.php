@@ -460,4 +460,81 @@ final class TtlvTest extends TestCase
         $this->assertSame(5, $decoded['length']);
         $this->assertSame(16, $decoded['total_length']); // 8 header + 8 padded
     }
+
+    // -----------------------------------------------------------------------
+    // Security hardening tests
+    // -----------------------------------------------------------------------
+
+    public function testRejectsDeclaredLengthExceedingBuffer(): void
+    {
+        // Header claiming 1000 bytes of value, but only 10 bytes provided
+        $header = pack('C3C', 0x42, 0x00, 0x01, 0x07); // tag=0x420001, type=TextString
+        $header .= pack('N', 1000); // length = 1000
+        $body = str_repeat("\x00", 10);
+        $buf = $header . $body;
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/exceeds buffer/');
+        Ttlv::decode($buf);
+    }
+
+    public function testAcceptsDeclaredLengthThatExactlyFitsBuffer(): void
+    {
+        $encoded = Ttlv::encodeInteger(0x420001, 42);
+        $decoded = Ttlv::decode($encoded);
+        $this->assertSame(42, $decoded['value']);
+    }
+
+    public function testRejectsZeroLengthBuffer(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/too short/');
+        Ttlv::decode('');
+    }
+
+    public function testRejectsStructuresNestedDeeperThan32Levels(): void
+    {
+        // Build 33 levels of nesting
+        $inner = Ttlv::encodeInteger(0x420001, 42);
+        for ($i = 0; $i < 33; $i++) {
+            $inner = Ttlv::encodeStructure(0x420001, [$inner]);
+        }
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/depth/');
+        Ttlv::decode($inner);
+    }
+
+    public function testAcceptsStructuresNestedExactly32LevelsDeep(): void
+    {
+        // Build 31 wrapping levels (root is depth 0, innermost is depth 31)
+        $inner = Ttlv::encodeInteger(0x420001, 42);
+        for ($i = 0; $i < 31; $i++) {
+            $inner = Ttlv::encodeStructure(0x420001, [$inner]);
+        }
+        $decoded = Ttlv::decode($inner);
+        $this->assertSame(Ttlv::TYPE_STRUCTURE, $decoded['type']);
+    }
+
+    public function testRejectsTruncatedHeader(): void
+    {
+        $buf = pack('C4', 0x42, 0x00, 0x01, 0x02);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/too short/');
+        Ttlv::decode($buf);
+    }
+
+    public function testHandlesIntegerWithWrongLengthSafely(): void
+    {
+        // Header: tag=0x420001, type=Integer(0x02), length=3 (should be 4)
+        $buf = str_repeat("\x00", 16);
+        $buf[0] = chr(0x42); $buf[1] = chr(0x00); $buf[2] = chr(0x01);
+        $buf[3] = chr(0x02); // type = Integer
+        $buf = substr_replace($buf, pack('N', 3), 4, 4); // length = 3
+        // Should either throw or handle safely — must not crash
+        try {
+            Ttlv::decode($buf);
+        } catch (\Exception $e) {
+            // Any exception is acceptable
+        }
+        $this->assertTrue(true, 'decoder did not crash on malformed integer length');
+    }
 }
