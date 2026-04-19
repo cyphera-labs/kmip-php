@@ -121,15 +121,23 @@ final class Ttlv
         return self::encode($tag, self::TYPE_DATE_TIME, pack('J', $value));
     }
 
+    /** Maximum nesting depth for TTLV structures. */
+    private const MAX_DECODE_DEPTH = 32;
+
     /**
      * Decode a TTLV buffer into a parsed tree.
      *
      * @param string $buf    Raw TTLV bytes.
      * @param int    $offset Starting offset.
+     * @param int    $depth  Internal recursion depth counter.
      * @return array{tag: int, type: int, value: mixed, length: int, total_length: int}
      */
-    public static function decode(string $buf, int $offset = 0): array
+    public static function decode(string $buf, int $offset = 0, int $depth = 0): array
     {
+        if ($depth > self::MAX_DECODE_DEPTH) {
+            throw new \RuntimeException('TTLV: maximum nesting depth exceeded');
+        }
+
         if (strlen($buf) - $offset < 8) {
             throw new \RuntimeException('TTLV buffer too short for header');
         }
@@ -142,13 +150,22 @@ final class Ttlv
         $totalLength = 8 + $padded;
         $valueStart = $offset + 8;
 
+        // Bounds check: ensure declared length fits within buffer.
+        if ($valueStart + $padded > strlen($buf)) {
+            throw new \RuntimeException(sprintf(
+                'TTLV: declared length %d exceeds buffer (have %d bytes)',
+                $length,
+                strlen($buf) - $valueStart
+            ));
+        }
+
         switch ($type) {
             case self::TYPE_STRUCTURE:
                 $children = [];
                 $pos = $valueStart;
                 $end = $valueStart + $length;
                 while ($pos < $end) {
-                    $child = self::decode($buf, $pos);
+                    $child = self::decode($buf, $pos, $depth + 1);
                     $children[] = $child;
                     $pos += $child['total_length'];
                 }

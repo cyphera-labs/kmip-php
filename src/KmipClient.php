@@ -28,12 +28,16 @@ namespace Cyphera\Kmip;
  */
 final class KmipClient
 {
+    /** Maximum KMIP response size (16MB). */
+    private const MAX_RESPONSE_SIZE = 16 * 1024 * 1024;
+
     private string $host;
     private int $port;
     private int $timeout;
     private string $clientCert;
     private string $clientKey;
     private ?string $caCert;
+    private bool $insecureSkipVerify;
 
     /** @var resource|null */
     private $socket = null;
@@ -45,7 +49,8 @@ final class KmipClient
      *     clientCert: string,
      *     clientKey: string,
      *     caCert?: string,
-     *     timeout?: int
+     *     timeout?: int,
+     *     insecureSkipVerify?: bool
      * } $options
      */
     public function __construct(array $options)
@@ -56,6 +61,7 @@ final class KmipClient
         $this->clientCert = $options['clientCert'];
         $this->clientKey = $options['clientKey'];
         $this->caCert = $options['caCert'] ?? null;
+        $this->insecureSkipVerify = $options['insecureSkipVerify'] ?? false;
     }
 
     // -----------------------------------------------------------------------
@@ -536,13 +542,40 @@ final class KmipClient
     private function send(string $request): string
     {
         $socket = $this->connect();
-        fwrite($socket, $request);
+        $written = @fwrite($socket, $request);
+        if ($written === false) {
+            $this->socket = null; // Mark connection as stale.
+            throw new \RuntimeException('KMIP: failed to write request');
+        }
 
         // Read TTLV header (8 bytes) to determine total length
-        $header = $this->recvExact($socket, 8);
+        try {
+            $header = $this->recvExact($socket, 8);
+        } catch (\RuntimeException $e) {
+            $this->socket = null; // Mark connection as stale.
+            throw $e;
+        }
+
         $unpacked = unpack('N', substr($header, 4, 4));
         $valueLength = $unpacked[1];
-        $body = $this->recvExact($socket, $valueLength);
+
+        // Validate response size before allocating.
+        if ($valueLength > self::MAX_RESPONSE_SIZE) {
+            $this->socket = null; // Mark connection as stale.
+            throw new \RuntimeException(sprintf(
+                'KMIP: response too large (%d bytes, max %d)',
+                $valueLength,
+                self::MAX_RESPONSE_SIZE
+            ));
+        }
+
+        try {
+            $body = $this->recvExact($socket, $valueLength);
+        } catch (\RuntimeException $e) {
+            $this->socket = null; // Mark connection as stale.
+            throw $e;
+        }
+
         return $header . $body;
     }
 
@@ -575,15 +608,21 @@ final class KmipClient
             return $this->socket;
         }
 
+        $sslOptions = [
+            'local_cert' => $this->clientCert,
+            'local_pk' => $this->clientKey,
+            // Always verify peer certificates by default (uses system roots when no CA provided).
+            // Only disable if explicitly opted in via insecureSkipVerify.
+            'verify_peer' => !$this->insecureSkipVerify,
+            'verify_peer_name' => !$this->insecureSkipVerify,
+            'allow_self_signed' => $this->insecureSkipVerify,
+        ];
+        if ($this->caCert !== null) {
+            $sslOptions['cafile'] = $this->caCert;
+        }
+
         $context = stream_context_create([
-            'ssl' => array_filter([
-                'local_cert' => $this->clientCert,
-                'local_pk' => $this->clientKey,
-                'cafile' => $this->caCert,
-                'verify_peer' => $this->caCert !== null,
-                'verify_peer_name' => $this->caCert !== null,
-                'allow_self_signed' => $this->caCert === null,
-            ], fn($v) => $v !== null),
+            'ssl' => $sslOptions,
         ]);
 
         $address = sprintf('ssl://%s:%d', $this->host, $this->port);
