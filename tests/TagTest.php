@@ -286,19 +286,29 @@ final class TagTest extends TestCase
         $this->assertSame(0x00000007, Algorithm::HMAC_SHA1);
     }
 
+    public function testAlgorithmHmacSha224(): void
+    {
+        $this->assertSame(0x00000008, Algorithm::HMAC_SHA224);
+    }
+
     public function testAlgorithmHmacSha256(): void
     {
-        $this->assertSame(0x00000008, Algorithm::HMAC_SHA256);
+        $this->assertSame(0x00000009, Algorithm::HMAC_SHA256);
     }
 
     public function testAlgorithmHmacSha384(): void
     {
-        $this->assertSame(0x00000009, Algorithm::HMAC_SHA384);
+        $this->assertSame(0x0000000A, Algorithm::HMAC_SHA384);
     }
 
     public function testAlgorithmHmacSha512(): void
     {
-        $this->assertSame(0x0000000A, Algorithm::HMAC_SHA512);
+        $this->assertSame(0x0000000B, Algorithm::HMAC_SHA512);
+    }
+
+    public function testAlgorithmHmacMd5(): void
+    {
+        $this->assertSame(0x0000000C, Algorithm::HMAC_MD5);
     }
 
     public function testAlgorithmNoDuplicateValues(): void
@@ -407,7 +417,17 @@ final class TagTest extends TestCase
 
     public function testUsageMaskDeriveKey(): void
     {
-        $this->assertSame(0x00000100, UsageMask::DERIVE_KEY);
+        $this->assertSame(0x00000080, UsageMask::MAC_GENERATE);
+    }
+
+    public function testUsageMaskMacVerify(): void
+    {
+        $this->assertSame(0x00000100, UsageMask::MAC_VERIFY);
+    }
+
+    public function testUsageMaskDeriveKey(): void
+    {
+        $this->assertSame(0x00000200, UsageMask::DERIVE_KEY);
     }
 
     public function testUsageMaskKeyAgreement(): void

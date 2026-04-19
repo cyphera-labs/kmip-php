@@ -166,9 +166,11 @@ final class Algorithm
     public const DSA         = 0x00000005;
     public const ECDSA       = 0x00000006;
     public const HMAC_SHA1   = 0x00000007;
-    public const HMAC_SHA256 = 0x00000008;
-    public const HMAC_SHA384 = 0x00000009;
-    public const HMAC_SHA512 = 0x0000000A;
+    public const HMAC_SHA224 = 0x00000008;
+    public const HMAC_SHA256 = 0x00000009;
+    public const HMAC_SHA384 = 0x0000000A;
+    public const HMAC_SHA512 = 0x0000000B;
+    public const HMAC_MD5    = 0x0000000C;
 }
 
 final class NameType
@@ -186,6 +188,8 @@ final class UsageMask
     public const WRAP_KEY      = 0x00000010;
     public const UNWRAP_KEY    = 0x00000020;
     public const EXPORT        = 0x00000040;
-    public const DERIVE_KEY    = 0x00000100;
+    public const MAC_GENERATE  = 0x00000080;
+    public const MAC_VERIFY    = 0x00000100;
+    public const DERIVE_KEY    = 0x00000200;
     public const KEY_AGREEMENT = 0x00000800;
 }
