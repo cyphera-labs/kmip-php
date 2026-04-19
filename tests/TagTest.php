@@ -67,7 +67,7 @@ final class TagTest extends TestCase
     }
 
     // -----------------------------------------------------------------------
-    // Operation values -- KMIP 1.4 Section 9.1.3.2.2
+    // Operation values -- KMIP 1.4 Section 9.1.3.2.2 (all 27)
     // -----------------------------------------------------------------------
 
     public function testOperationCreate(): void
@@ -75,24 +75,29 @@ final class TagTest extends TestCase
         $this->assertSame(0x00000001, Operation::CREATE);
     }
 
+    public function testOperationCreateKeyPair(): void
+    {
+        $this->assertSame(0x00000002, Operation::CREATE_KEY_PAIR);
+    }
+
+    public function testOperationRegister(): void
+    {
+        $this->assertSame(0x00000003, Operation::REGISTER);
+    }
+
+    public function testOperationReKey(): void
+    {
+        $this->assertSame(0x00000004, Operation::RE_KEY);
+    }
+
+    public function testOperationDeriveKey(): void
+    {
+        $this->assertSame(0x00000005, Operation::DERIVE_KEY);
+    }
+
     public function testOperationLocate(): void
     {
         $this->assertSame(0x00000008, Operation::LOCATE);
-    }
-
-    public function testOperationGet(): void
-    {
-        $this->assertSame(0x0000000A, Operation::GET);
-    }
-
-    public function testOperationActivate(): void
-    {
-        $this->assertSame(0x00000012, Operation::ACTIVATE);
-    }
-
-    public function testOperationDestroy(): void
-    {
-        $this->assertSame(0x00000014, Operation::DESTROY);
     }
 
     public function testOperationCheck(): void
@@ -100,10 +105,116 @@ final class TagTest extends TestCase
         $this->assertSame(0x00000009, Operation::CHECK);
     }
 
+    public function testOperationGet(): void
+    {
+        $this->assertSame(0x0000000A, Operation::GET);
+    }
+
+    public function testOperationGetAttributes(): void
+    {
+        $this->assertSame(0x0000000B, Operation::GET_ATTRIBUTES);
+    }
+
+    public function testOperationGetAttributeList(): void
+    {
+        $this->assertSame(0x0000000C, Operation::GET_ATTRIBUTE_LIST);
+    }
+
+    public function testOperationAddAttribute(): void
+    {
+        $this->assertSame(0x0000000D, Operation::ADD_ATTRIBUTE);
+    }
+
+    public function testOperationModifyAttribute(): void
+    {
+        $this->assertSame(0x0000000E, Operation::MODIFY_ATTRIBUTE);
+    }
+
+    public function testOperationDeleteAttribute(): void
+    {
+        $this->assertSame(0x0000000F, Operation::DELETE_ATTRIBUTE);
+    }
+
+    public function testOperationObtainLease(): void
+    {
+        $this->assertSame(0x00000010, Operation::OBTAIN_LEASE);
+    }
+
+    public function testOperationActivate(): void
+    {
+        $this->assertSame(0x00000012, Operation::ACTIVATE);
+    }
+
+    public function testOperationRevoke(): void
+    {
+        $this->assertSame(0x00000013, Operation::REVOKE);
+    }
+
+    public function testOperationDestroy(): void
+    {
+        $this->assertSame(0x00000014, Operation::DESTROY);
+    }
+
+    public function testOperationArchive(): void
+    {
+        $this->assertSame(0x00000015, Operation::ARCHIVE);
+    }
+
+    public function testOperationRecover(): void
+    {
+        $this->assertSame(0x00000016, Operation::RECOVER);
+    }
+
+    public function testOperationQuery(): void
+    {
+        $this->assertSame(0x00000018, Operation::QUERY);
+    }
+
+    public function testOperationPoll(): void
+    {
+        $this->assertSame(0x0000001A, Operation::POLL);
+    }
+
+    public function testOperationDiscoverVersions(): void
+    {
+        $this->assertSame(0x0000001E, Operation::DISCOVER_VERSIONS);
+    }
+
+    public function testOperationEncrypt(): void
+    {
+        $this->assertSame(0x0000001F, Operation::ENCRYPT);
+    }
+
+    public function testOperationDecrypt(): void
+    {
+        $this->assertSame(0x00000020, Operation::DECRYPT);
+    }
+
+    public function testOperationSign(): void
+    {
+        $this->assertSame(0x00000021, Operation::SIGN);
+    }
+
+    public function testOperationSignatureVerify(): void
+    {
+        $this->assertSame(0x00000022, Operation::SIGNATURE_VERIFY);
+    }
+
+    public function testOperationMac(): void
+    {
+        $this->assertSame(0x00000023, Operation::MAC);
+    }
+
     public function testOperationNoDuplicateValues(): void
     {
         $values = $this->getClassConstants(Operation::class);
         $this->assertSame(count($values), count(array_unique($values)));
+    }
+
+    public function testOperationHas27Constants(): void
+    {
+        $values = $this->getClassConstants(Operation::class);
+        $this->assertCount(27, $values);
     }
 
     // -----------------------------------------------------------------------
@@ -342,6 +453,110 @@ final class TagTest extends TestCase
     {
         $values = $this->getClassConstants(Tag::class);
         $this->assertSame(count($values), count(array_unique($values)));
+    }
+
+    // -----------------------------------------------------------------------
+    // New tags -- key pair, certificate, crypto ops, revocation, etc.
+    // -----------------------------------------------------------------------
+
+    public function testTagPrivateKeyUniqueIdentifier(): void
+    {
+        $this->assertSame(0x420066, Tag::PRIVATE_KEY_UNIQUE_IDENTIFIER);
+    }
+
+    public function testTagPublicKeyUniqueIdentifier(): void
+    {
+        $this->assertSame(0x42006F, Tag::PUBLIC_KEY_UNIQUE_IDENTIFIER);
+    }
+
+    public function testTagPublicKey(): void
+    {
+        $this->assertSame(0x42004E, Tag::PUBLIC_KEY);
+    }
+
+    public function testTagPrivateKey(): void
+    {
+        $this->assertSame(0x42004D, Tag::PRIVATE_KEY);
+    }
+
+    public function testTagCertificate(): void
+    {
+        $this->assertSame(0x420021, Tag::CERTIFICATE);
+    }
+
+    public function testTagCertificateType(): void
+    {
+        $this->assertSame(0x42001D, Tag::CERTIFICATE_TYPE);
+    }
+
+    public function testTagCertificateValue(): void
+    {
+        $this->assertSame(0x42001E, Tag::CERTIFICATE_VALUE);
+    }
+
+    public function testTagData(): void
+    {
+        $this->assertSame(0x420033, Tag::DATA);
+    }
+
+    public function testTagIvCounterNonce(): void
+    {
+        $this->assertSame(0x420047, Tag::IV_COUNTER_NONCE);
+    }
+
+    public function testTagSignatureData(): void
+    {
+        $this->assertSame(0x42004F, Tag::SIGNATURE_DATA);
+    }
+
+    public function testTagMacData(): void
+    {
+        $this->assertSame(0x420051, Tag::MAC_DATA);
+    }
+
+    public function testTagValidityIndicator(): void
+    {
+        $this->assertSame(0x420098, Tag::VALIDITY_INDICATOR);
+    }
+
+    public function testTagRevocationReason(): void
+    {
+        $this->assertSame(0x420082, Tag::REVOCATION_REASON);
+    }
+
+    public function testTagRevocationReasonCode(): void
+    {
+        $this->assertSame(0x420083, Tag::REVOCATION_REASON_CODE);
+    }
+
+    public function testTagQueryFunction(): void
+    {
+        $this->assertSame(0x420074, Tag::QUERY_FUNCTION);
+    }
+
+    public function testTagState(): void
+    {
+        $this->assertSame(0x42008D, Tag::STATE);
+    }
+
+    public function testTagDerivationMethod(): void
+    {
+        $this->assertSame(0x420031, Tag::DERIVATION_METHOD);
+    }
+
+    public function testTagDerivationParameters(): void
+    {
+        $this->assertSame(0x420032, Tag::DERIVATION_PARAMETERS);
+    }
+
+    public function testTagDerivationData(): void
+    {
+        $this->assertSame(0x420030, Tag::DERIVATION_DATA);
+    }
+
+    public function testTagLeaseTime(): void
+    {
+        $this->assertSame(0x420049, Tag::LEASE_TIME);
     }
 
     // -----------------------------------------------------------------------

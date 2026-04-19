@@ -6,7 +6,6 @@ namespace Cyphera\Kmip;
 
 /**
  * KMIP 1.4 tag, type, and enum constants.
- * Only the subset needed for Locate, Get, Create operations.
  *
  * Reference: OASIS KMIP Specification v1.4
  * https://docs.oasis-open.org/kmip/spec/v1.4/kmip-spec-v1.4.html
@@ -58,16 +57,73 @@ final class Tag
 
     // Template
     public const TEMPLATE_ATTRIBUTE = 0x420091;
+
+    // Key pair
+    public const PRIVATE_KEY_UNIQUE_IDENTIFIER = 0x420066;
+    public const PUBLIC_KEY_UNIQUE_IDENTIFIER  = 0x42006F;
+    public const PUBLIC_KEY                    = 0x42004E;
+    public const PRIVATE_KEY                   = 0x42004D;
+
+    // Certificate
+    public const CERTIFICATE       = 0x420021;
+    public const CERTIFICATE_TYPE  = 0x42001D;
+    public const CERTIFICATE_VALUE = 0x42001E;
+
+    // Crypto operations
+    public const DATA               = 0x420033;
+    public const IV_COUNTER_NONCE   = 0x420047;
+    public const SIGNATURE_DATA     = 0x42004F;
+    public const MAC_DATA           = 0x420051;
+    public const VALIDITY_INDICATOR = 0x420098;
+
+    // Revocation
+    public const REVOCATION_REASON      = 0x420082;
+    public const REVOCATION_REASON_CODE = 0x420083;
+
+    // Query
+    public const QUERY_FUNCTION = 0x420074;
+
+    // State
+    public const STATE = 0x42008D;
+
+    // Derivation
+    public const DERIVATION_METHOD     = 0x420031;
+    public const DERIVATION_PARAMETERS = 0x420032;
+    public const DERIVATION_DATA       = 0x420030;
+
+    // Lease
+    public const LEASE_TIME = 0x420049;
 }
 
 final class Operation
 {
-    public const CREATE   = 0x00000001;
-    public const GET      = 0x0000000A;
-    public const LOCATE   = 0x00000008;
-    public const ACTIVATE = 0x00000012;
-    public const DESTROY  = 0x00000014;
-    public const CHECK    = 0x00000009;
+    public const CREATE             = 0x00000001;
+    public const CREATE_KEY_PAIR    = 0x00000002;
+    public const REGISTER           = 0x00000003;
+    public const RE_KEY             = 0x00000004;
+    public const DERIVE_KEY         = 0x00000005;
+    public const LOCATE             = 0x00000008;
+    public const CHECK              = 0x00000009;
+    public const GET                = 0x0000000A;
+    public const GET_ATTRIBUTES     = 0x0000000B;
+    public const GET_ATTRIBUTE_LIST = 0x0000000C;
+    public const ADD_ATTRIBUTE      = 0x0000000D;
+    public const MODIFY_ATTRIBUTE   = 0x0000000E;
+    public const DELETE_ATTRIBUTE   = 0x0000000F;
+    public const OBTAIN_LEASE       = 0x00000010;
+    public const ACTIVATE           = 0x00000012;
+    public const REVOKE             = 0x00000013;
+    public const DESTROY            = 0x00000014;
+    public const ARCHIVE            = 0x00000015;
+    public const RECOVER            = 0x00000016;
+    public const QUERY              = 0x00000018;
+    public const POLL               = 0x0000001A;
+    public const DISCOVER_VERSIONS  = 0x0000001E;
+    public const ENCRYPT            = 0x0000001F;
+    public const DECRYPT            = 0x00000020;
+    public const SIGN               = 0x00000021;
+    public const SIGNATURE_VERIFY   = 0x00000022;
+    public const MAC                = 0x00000023;
 }
 
 final class ObjectType
