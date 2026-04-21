@@ -38,6 +38,7 @@ final class KmipClient
     private string $clientKey;
     private ?string $caCert;
     private bool $insecureSkipVerify;
+    private ?string $serverCertFingerprint;
 
     /** @var resource|null */
     private $socket = null;
@@ -50,7 +51,8 @@ final class KmipClient
      *     clientKey: string,
      *     caCert?: string,
      *     timeout?: int,
-     *     insecureSkipVerify?: bool
+     *     insecureSkipVerify?: bool,
+     *     serverCertFingerprint?: string
      * } $options
      */
     public function __construct(array $options)
@@ -62,6 +64,14 @@ final class KmipClient
         $this->clientKey = $options['clientKey'];
         $this->caCert = $options['caCert'] ?? null;
         $this->insecureSkipVerify = $options['insecureSkipVerify'] ?? false;
+        $this->serverCertFingerprint = $options['serverCertFingerprint'] ?? null;
+
+        if ($this->insecureSkipVerify) {
+            trigger_error(
+                'KmipClient: insecureSkipVerify=true disables TLS certificate verification. NEVER use in production.',
+                E_USER_WARNING
+            );
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -135,11 +145,12 @@ final class KmipClient
     /**
      * Derive a new key from an existing key.
      *
+     * @param int $derivationMethod KMIP derivation method enum (default: HKDF = 0x00000004).
      * @return array{unique_identifier: ?string}
      */
-    public function deriveKey(string $uniqueId, string $derivationData, string $name, int $length): array
+    public function deriveKey(string $uniqueId, string $derivationData, string $name, int $length, int $derivationMethod = 0x00000004): array
     {
-        $request = Operations::buildDeriveKeyRequest($uniqueId, $derivationData, $name, $length);
+        $request = Operations::buildDeriveKeyRequest($uniqueId, $derivationData, $name, $length, $derivationMethod);
         $response = Operations::parseResponse($this->send($request));
         return Operations::parseDeriveKeyPayload($response['payload']);
     }
@@ -502,7 +513,8 @@ final class KmipClient
 
     /**
      * Resolve an algorithm name string to its KMIP enum value.
-     * Returns Algorithm::AES for unknown names.
+     *
+     * @throws \InvalidArgumentException for unknown algorithm names.
      */
     public static function resolveAlgorithm(string $name): int
     {
@@ -517,7 +529,7 @@ final class KmipClient
             'HMACSHA256' => Algorithm::HMAC_SHA256,
             'HMACSHA384' => Algorithm::HMAC_SHA384,
             'HMACSHA512' => Algorithm::HMAC_SHA512,
-            default => 0,
+            default => throw new \InvalidArgumentException("Unknown KMIP algorithm: $name"),
         };
     }
 
@@ -542,7 +554,7 @@ final class KmipClient
     private function send(string $request): string
     {
         $socket = $this->connect();
-        $written = @fwrite($socket, $request);
+        $written = fwrite($socket, $request);
         if ($written === false) {
             $this->socket = null; // Mark connection as stale.
             throw new \RuntimeException('KMIP: failed to write request');
@@ -611,14 +623,16 @@ final class KmipClient
         $sslOptions = [
             'local_cert' => $this->clientCert,
             'local_pk' => $this->clientKey,
-            // Always verify peer certificates by default (uses system roots when no CA provided).
-            // Only disable if explicitly opted in via insecureSkipVerify.
             'verify_peer' => !$this->insecureSkipVerify,
             'verify_peer_name' => !$this->insecureSkipVerify,
             'allow_self_signed' => $this->insecureSkipVerify,
+            'crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT,
         ];
         if ($this->caCert !== null) {
             $sslOptions['cafile'] = $this->caCert;
+        }
+        if ($this->serverCertFingerprint !== null) {
+            $sslOptions['peer_fingerprint'] = ['sha256' => $this->serverCertFingerprint];
         }
 
         $context = stream_context_create([
@@ -626,7 +640,7 @@ final class KmipClient
         ]);
 
         $address = sprintf('ssl://%s:%d', $this->host, $this->port);
-        $socket = @stream_socket_client(
+        $socket = stream_socket_client(
             $address,
             $errno,
             $errstr,
@@ -636,7 +650,11 @@ final class KmipClient
         );
 
         if ($socket === false) {
-            throw new \RuntimeException(sprintf('KMIP connection failed: %s (%d)', $errstr, $errno));
+            throw new \RuntimeException(sprintf(
+                'KMIP connection failed: %s (%d)',
+                $errstr ?: 'unknown error',
+                $errno
+            ));
         }
 
         stream_set_timeout($socket, $this->timeout);

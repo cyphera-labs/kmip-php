@@ -522,19 +522,104 @@ final class TtlvTest extends TestCase
         Ttlv::decode($buf);
     }
 
-    public function testHandlesIntegerWithWrongLengthSafely(): void
+    public function testIntegerWithWrongLengthThrows(): void
     {
         // Header: tag=0x420001, type=Integer(0x02), length=3 (should be 4)
         $buf = str_repeat("\x00", 16);
         $buf[0] = chr(0x42); $buf[1] = chr(0x00); $buf[2] = chr(0x01);
         $buf[3] = chr(0x02); // type = Integer
         $buf = substr_replace($buf, pack('N', 3), 4, 4); // length = 3
-        // Should either throw or handle safely — must not crash
-        try {
-            Ttlv::decode($buf);
-        } catch (\Exception $e) {
-            // Any exception is acceptable
-        }
-        $this->assertTrue(true, 'decoder did not crash on malformed integer length');
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/Integer type requires length 4/');
+        Ttlv::decode($buf);
+    }
+
+    public function testEnumerationWithWrongLengthThrows(): void
+    {
+        $buf = str_repeat("\x00", 16);
+        $buf[0] = chr(0x42); $buf[1] = chr(0x00); $buf[2] = chr(0x01);
+        $buf[3] = chr(0x05); // type = Enumeration
+        $buf = substr_replace($buf, pack('N', 2), 4, 4); // length = 2
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/Enumeration type requires length 4/');
+        Ttlv::decode($buf);
+    }
+
+    public function testBooleanWithWrongLengthThrows(): void
+    {
+        $buf = str_repeat("\x00", 16);
+        $buf[0] = chr(0x42); $buf[1] = chr(0x00); $buf[2] = chr(0x01);
+        $buf[3] = chr(0x06); // type = Boolean
+        $buf = substr_replace($buf, pack('N', 4), 4, 4); // length = 4 (should be 8)
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/Boolean type requires length 8/');
+        Ttlv::decode($buf);
+    }
+
+    public function testLongIntegerWithWrongLengthThrows(): void
+    {
+        $buf = str_repeat("\x00", 16);
+        $buf[0] = chr(0x42); $buf[1] = chr(0x00); $buf[2] = chr(0x01);
+        $buf[3] = chr(0x03); // type = LongInteger
+        $buf = substr_replace($buf, pack('N', 4), 4, 4); // length = 4 (should be 8)
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/LongInteger type requires length 8/');
+        Ttlv::decode($buf);
+    }
+
+    public function testDateTimeWithWrongLengthThrows(): void
+    {
+        $buf = str_repeat("\x00", 16);
+        $buf[0] = chr(0x42); $buf[1] = chr(0x00); $buf[2] = chr(0x01);
+        $buf[3] = chr(0x09); // type = DateTime
+        $buf = substr_replace($buf, pack('N', 4), 4, 4); // length = 4 (should be 8)
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/DateTime type requires length 8/');
+        Ttlv::decode($buf);
+    }
+
+    public function testIntervalWithWrongLengthThrows(): void
+    {
+        $buf = str_repeat("\x00", 16);
+        $buf[0] = chr(0x42); $buf[1] = chr(0x00); $buf[2] = chr(0x01);
+        $buf[3] = chr(0x0A); // type = Interval
+        $buf = substr_replace($buf, pack('N', 2), 4, 4); // length = 2 (should be 4)
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/Interval type requires length 4/');
+        Ttlv::decode($buf);
+    }
+
+    // -----------------------------------------------------------------------
+    // UTF-8 validation (M1 / M8)
+    // -----------------------------------------------------------------------
+
+    public function testInvalidUtf8InTextStringThrows(): void
+    {
+        // Build a TextString TTLV with invalid UTF-8 byte 0xFF
+        $header = pack('C3C', 0x42, 0x00, 0x55, 0x07); // tag=0x420055, type=TextString
+        $header .= pack('N', 2); // length = 2
+        $value = "\xFF\xFE"; // invalid UTF-8
+        $padding = str_repeat("\x00", 6); // pad to 8
+        $buf = $header . $value . $padding;
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/invalid UTF-8/');
+        Ttlv::decode($buf);
+    }
+
+    // -----------------------------------------------------------------------
+    // Structure child overrun guard
+    // -----------------------------------------------------------------------
+
+    public function testStructureChildOverrunThrows(): void
+    {
+        // Build a structure whose declared length is too small for its child
+        // Structure header: tag=0x420001, type=Structure(0x01), length=8 (only room for header, not value)
+        $child = Ttlv::encodeInteger(0x420002, 42); // 16 bytes total
+        // Structure with length=8 but child needs 16
+        $header = pack('C3C', 0x42, 0x00, 0x01, 0x01); // tag + type=structure
+        $header .= pack('N', 8); // length = 8 (too small)
+        $buf = $header . $child;
+        $this->expectException(\RuntimeException::class);
+        Ttlv::decode($buf);
     }
 }

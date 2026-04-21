@@ -226,11 +226,13 @@ final class Operations
         string $uniqueId,
         string $derivationData,
         string $name,
-        int $length
+        int $length,
+        int $derivationMethod = 0x00000004, // HKDF
     ): string {
         $payload = Ttlv::encodeStructure(Tag::REQUEST_PAYLOAD, [
             Ttlv::encodeTextString(Tag::UNIQUE_IDENTIFIER, $uniqueId),
             Ttlv::encodeStructure(Tag::DERIVATION_PARAMETERS, [
+                Ttlv::encodeEnum(Tag::DERIVATION_METHOD, $derivationMethod),
                 Ttlv::encodeByteString(Tag::DERIVATION_DATA, $derivationData),
             ]),
             Ttlv::encodeStructure(Tag::TEMPLATE_ATTRIBUTE, [
@@ -701,9 +703,16 @@ final class Operations
         ];
 
         if ($result['result_status'] !== ResultStatus::SUCCESS) {
-            $errorMsg = $result['result_message']
-                ?? sprintf('KMIP operation failed (status=%d)', $result['result_status']);
-            throw new \RuntimeException($errorMsg);
+            $errorMsg = $result['result_message'] ?? '';
+            // Sanitize server-controlled message to prevent log injection
+            $errorMsg = preg_replace('/[\x00-\x08\x0A-\x1F\x7F]/', '', $errorMsg);
+            $errorMsg = substr($errorMsg, 0, 256)
+                ?: sprintf('KMIP operation failed (status=%d)', $result['result_status'] ?? 0);
+            throw new KmipException(
+                $errorMsg,
+                $result['result_status'] ?? 0,
+                $result['result_reason'] ?? 0,
+            );
         }
 
         return $result;

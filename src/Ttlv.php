@@ -168,14 +168,25 @@ final class Ttlv
                     $child = self::decode($buf, $pos, $depth + 1);
                     $children[] = $child;
                     $pos += $child['total_length'];
+                    if ($pos > $end) {
+                        throw new \RuntimeException(sprintf(
+                            'TTLV: structure child overruns parent boundary at offset %d',
+                            $pos
+                        ));
+                    }
                 }
                 $value = $children;
                 break;
 
             case self::TYPE_INTEGER:
+                if ($length !== 4) {
+                    throw new \RuntimeException(sprintf(
+                        'TTLV: Integer type requires length 4, got %d',
+                        $length
+                    ));
+                }
                 $unpacked = unpack('N', substr($buf, $valueStart, 4));
                 $val = $unpacked[1];
-                // Handle signed 32-bit
                 if ($val >= 0x80000000) {
                     $val -= 0x100000000;
                 }
@@ -183,22 +194,47 @@ final class Ttlv
                 break;
 
             case self::TYPE_LONG_INTEGER:
+                if ($length !== 8) {
+                    throw new \RuntimeException(sprintf(
+                        'TTLV: LongInteger type requires length 8, got %d',
+                        $length
+                    ));
+                }
                 $unpacked = unpack('J', substr($buf, $valueStart, 8));
                 $value = $unpacked[1];
                 break;
 
             case self::TYPE_ENUMERATION:
+                if ($length !== 4) {
+                    throw new \RuntimeException(sprintf(
+                        'TTLV: Enumeration type requires length 4, got %d',
+                        $length
+                    ));
+                }
                 $unpacked = unpack('N', substr($buf, $valueStart, 4));
                 $value = $unpacked[1];
                 break;
 
             case self::TYPE_BOOLEAN:
+                if ($length !== 8) {
+                    throw new \RuntimeException(sprintf(
+                        'TTLV: Boolean type requires length 8, got %d',
+                        $length
+                    ));
+                }
                 $unpacked = unpack('J', substr($buf, $valueStart, 8));
                 $value = $unpacked[1] !== 0;
                 break;
 
             case self::TYPE_TEXT_STRING:
-                $value = substr($buf, $valueStart, $length);
+                $raw = substr($buf, $valueStart, $length);
+                if ($length > 0 && !mb_check_encoding($raw, 'UTF-8')) {
+                    throw new \RuntimeException(sprintf(
+                        'TTLV: invalid UTF-8 in TextString at offset %d',
+                        $valueStart
+                    ));
+                }
+                $value = $raw;
                 break;
 
             case self::TYPE_BYTE_STRING:
@@ -206,11 +242,23 @@ final class Ttlv
                 break;
 
             case self::TYPE_DATE_TIME:
+                if ($length !== 8) {
+                    throw new \RuntimeException(sprintf(
+                        'TTLV: DateTime type requires length 8, got %d',
+                        $length
+                    ));
+                }
                 $unpacked = unpack('J', substr($buf, $valueStart, 8));
                 $value = $unpacked[1];
                 break;
 
             case self::TYPE_INTERVAL:
+                if ($length !== 4) {
+                    throw new \RuntimeException(sprintf(
+                        'TTLV: Interval type requires length 4, got %d',
+                        $length
+                    ));
+                }
                 $unpacked = unpack('N', substr($buf, $valueStart, 4));
                 $value = $unpacked[1];
                 break;

@@ -415,7 +415,7 @@ final class TagTest extends TestCase
         $this->assertSame(0x00000040, UsageMask::EXPORT);
     }
 
-    public function testUsageMaskDeriveKey(): void
+    public function testUsageMaskMacGenerate(): void
     {
         $this->assertSame(0x00000080, UsageMask::MAC_GENERATE);
     }
